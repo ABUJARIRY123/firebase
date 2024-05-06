@@ -8,7 +8,6 @@ import {
   signInFailure,
 } from '../redux/user/userSlice';
 import OAuth from '../components/OAuth';
-
 export default function SignIn() {
   const [formData, setFormData] = useState({});
   const { loading, error: errorMessage } = useSelector((state) => state.user);
@@ -36,7 +35,8 @@ export default function SignIn() {
 
       if (res.ok) {
         dispatch(signInSuccess(data));
-        navigate('/');
+        navigate('/dashboard');
+        console.log('Navigating to the Dashboar', data)
       }
     } catch (error) {
       dispatch(signInFailure(error.message));
