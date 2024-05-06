@@ -1,23 +1,33 @@
-import Comment from '../models/comment.model.js';
+import { createClient } from '@supabase/supabase-js';
+import { errorHandler } from '../utils/error.js';
+import { supabase } from '../index.js';
+
+// Assuming you have a function to get the current user from the request
+// This is a placeholder for your actual authentication logic
+function getCurrentUser(req) {
+  // Your logic to get the current user
+  return { id: 'user_id', isAdmin: false }; // Example user object
+}
 
 export const createComment = async (req, res, next) => {
+  const { id } = getCurrentUser(req);
+  if (!id ||id.isAdmin) {
+    return next(errorHandler(403, 'You are not allowed to create this comment'));
+  }
+  const { content, postId, userId } = req.body;
   try {
-    const { content, postId, userId } = req.body;
+    const { data, error } = await supabase
+   .from('comments')
+   .insert([
+       {
+        content,
+        post_id: postId,
+        user_id: userId,
+      },
+     ]);
 
-    if (userId !== req.user.id) {
-      return next(
-        errorHandler(403, 'You are not allowed to create this comment')
-      );
-    }
-
-    const newComment = new Comment({
-      content,
-      postId,
-      userId,
-    });
-    await newComment.save();
-
-    res.status(200).json(newComment);
+    if (error) throw error;
+    res.status(200).json(data[0]);
   } catch (error) {
     next(error);
   }
@@ -25,73 +35,63 @@ export const createComment = async (req, res, next) => {
 
 export const getPostComments = async (req, res, next) => {
   try {
-    const comments = await Comment.find({ postId: req.params.postId }).sort({
-      createdAt: -1,
-    });
-    res.status(200).json(comments);
+    const { data, error } = await supabase
+   .from('comments')
+   .select('*')
+   .eq('post_id', req.params.postId)
+   .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(data);
   } catch (error) {
     next(error);
   }
 };
 
 export const likeComment = async (req, res, next) => {
+  const { id } = getCurrentUser(req);
   try {
-    const comment = await Comment.findById(req.params.commentId);
-    if (!comment) {
-      return next(errorHandler(404, 'Comment not found'));
-    }
-    const userIndex = comment.likes.indexOf(req.user.id);
-    if (userIndex === -1) {
-      comment.numberOfLikes += 1;
-      comment.likes.push(req.user.id);
-    } else {
-      comment.numberOfLikes -= 1;
-      comment.likes.splice(userIndex, 1);
-    }
-    await comment.save();
-    res.status(200).json(comment);
+    const { data, error } = await supabase
+   .from('comments')
+   .update({
+       likes: supabase.raw(`array_append(likes, ${id})`),
+       number_of_likes: supabase.raw(`number_of_likes + 1`),
+     })
+   .match({ id: req.params.commentId });
+
+    if (error) throw error;
+    res.status(200).json(data[0]);
   } catch (error) {
     next(error);
   }
 };
 
 export const editComment = async (req, res, next) => {
+  const { id } = getCurrentUser(req);
   try {
-    const comment = await Comment.findById(req.params.commentId);
-    if (!comment) {
-      return next(errorHandler(404, 'Comment not found'));
-    }
-    if (comment.userId !== req.user.id && !req.user.isAdmin) {
-      return next(
-        errorHandler(403, 'You are not allowed to edit this comment')
-      );
-    }
+    const { data, error } = await supabase
+   .from('comments')
+   .update({
+       content: req.body.content,
+     })
+   .match({ id: req.params.commentId });
 
-    const editedComment = await Comment.findByIdAndUpdate(
-      req.params.commentId,
-      {
-        content: req.body.content,
-      },
-      { new: true }
-    );
-    res.status(200).json(editedComment);
+    if (error) throw error;
+    res.status(200).json(data[0]);
   } catch (error) {
     next(error);
   }
 };
 
 export const deleteComment = async (req, res, next) => {
+  const { id } = getCurrentUser(req);
   try {
-    const comment = await Comment.findById(req.params.commentId);
-    if (!comment) {
-      return next(errorHandler(404, 'Comment not found'));
-    }
-    if (comment.userId !== req.user.id && !req.user.isAdmin) {
-      return next(
-        errorHandler(403, 'You are not allowed to delete this comment')
-      );
-    }
-    await Comment.findByIdAndDelete(req.params.commentId);
+    const { data, error } = await supabase
+   .from('comments')
+   .delete()
+   .match({ id: req.params.commentId });
+
+    if (error) throw error;
     res.status(200).json('Comment has been deleted');
   } catch (error) {
     next(error);
@@ -99,27 +99,21 @@ export const deleteComment = async (req, res, next) => {
 };
 
 export const getcomments = async (req, res, next) => {
-  if (!req.user.isAdmin)
+  if (!getCurrentUser(req).isAdmin) {
     return next(errorHandler(403, 'You are not allowed to get all comments'));
+  }
   try {
     const startIndex = parseInt(req.query.startIndex) || 0;
     const limit = parseInt(req.query.limit) || 9;
-    const sortDirection = req.query.sort === 'desc' ? -1 : 1;
-    const comments = await Comment.find()
-      .sort({ createdAt: sortDirection })
-      .skip(startIndex)
-      .limit(limit);
-    const totalComments = await Comment.countDocuments();
-    const now = new Date();
-    const oneMonthAgo = new Date(
-      now.getFullYear(),
-      now.getMonth() - 1,
-      now.getDate()
-    );
-    const lastMonthComments = await Comment.countDocuments({
-      createdAt: { $gte: oneMonthAgo },
-    });
-    res.status(200).json({ comments, totalComments, lastMonthComments });
+    const sortDirection = req.query.sort === 'desc'? -1 : 1;
+    const { data, error } = await supabase
+   .from('comments')
+   .select('*')
+   .order('created_at', { ascending: sortDirection })
+   .range(startIndex, limit);
+
+    if (error) throw error;
+    res.status(200).json(data);
   } catch (error) {
     next(error);
   }
