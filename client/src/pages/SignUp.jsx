@@ -1,13 +1,25 @@
 import { Alert, Button, Label, Spinner, TextInput } from 'flowbite-react';
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import OAuth from '../components/OAuth';
+import { useState, useEffect } from 'react';
 
 export default function SignUp() {
   const [formData, setFormData] = useState({});
   const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [showAlert, setShowAlert] = useState(false); // State to control the visibility of the Alert
+
+  useEffect(() => {
+    if (errorMessage) {
+      setShowAlert(true);
+      const timer = setTimeout(() => {
+        setShowAlert(false);
+      }, 6500); // 30 seconds
+      return () => clearTimeout(timer); // Cleanup on component unmount
+    }
+  }, [errorMessage]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
   };
@@ -40,7 +52,12 @@ export default function SignUp() {
   return (
     <div className='min-h-screen flex items-center justify-center'>
       <div className='flex p-3 max-w-3xl mx-auto flex-col md:flex-row md:items-center gap-5'>
-        <div className='flex-1'>
+      <div className='flex-1'>
+          {showAlert && (
+            <Alert className='mt-20 absolute top-0 right-2' color='failure'>
+              {errorMessage}
+            </Alert>
+          )}
           <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
             <div>
               <Label className='flex items-center justify-center'  value='Your username' />
@@ -91,11 +108,11 @@ export default function SignUp() {
               Sign In
             </Link>
           </div>
-          {errorMessage && (
+          {/* {errorMessage && (
             <Alert className='mt-5' color='failure'>
               {errorMessage}
             </Alert>
-          )}
+          )} */}
         </div>
       </div>
     </div>
