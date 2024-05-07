@@ -3,7 +3,12 @@ import bcryptjs from 'bcryptjs';
 import { errorHandler } from '../utils/error.js';
 import jwt from 'jsonwebtoken';
 import { supabase } from '../index.js';
+import dotenv from 'dotenv';
 
+
+dotenv.config();
+
+const jwtSecret = process.env.JWT_SECRET;
 
 export const signup = async (req, res, next) => {
   const { username, email, password } = req.body;
@@ -48,25 +53,25 @@ export const signin = async (req, res, next) => {
 
   try {
     const { data: user, error } = await supabase
-    .from('users')
-    .select('id, username, email, is_admin, password')
-    .eq('email', email)
-    .single();
-    console.log('Query result:', user, error); // Debugging log
+     .from('users')
+     .select('id, username, email, is_admin, password')
+     .eq('email', email)
+     .single();
 
-    if (error || !user) {
-      console.error('Error fetching user:', error); // Debugging log
+    if (error ||!user) {
       return next(errorHandler(404, 'User not found'));
     }
 
-    console.log('User password from database:', user.password); // Debugging log
-
     const validPassword = bcryptjs.compareSync(password, user.password);
-    if (!validPassword) { 
+    if (!validPassword) {
       return next(errorHandler(400, 'Invalid password'));
     }
 
-    // Rest of the code...
+    // Generate JWT token
+    const token = jwt.sign({ id: user.id, is_admin: user.is_admin }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    // Send JWT token in the response
+    res.cookie('access_token', token, { httpOnly: true }).json({ token, is_admin: user.is_admin, username: user.username });
   } catch (error) {
     next(error);
   }
@@ -83,17 +88,13 @@ export const google = async (req, res, next) => {
      .single();
 
     if (error ||!user) {
-      const generatedPassword =
-        Math.random().toString(36).slice(-8) +
-        Math.random().toString(36).slice(-8);
+      const generatedPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
       const hashedPassword = bcryptjs.hashSync(generatedPassword, 10);
       const newUser = await supabase
        .from('users')
        .insert([
           {
-            username:
-              name.toLowerCase().split(' ').join('') +
-              Math.random().toString(9).slice(-4),
+            username: name.toLowerCase().split(' ').join('') + Math.random().toString(9).slice(-4),
             email,
             password: hashedPassword,
             profile_picture: googlePhotoUrl,
@@ -102,32 +103,22 @@ export const google = async (req, res, next) => {
 
       if (newUser.error) throw newUser.error;
 
-      const token = jwt.sign(
-        { id: newUser.data[0].id, is_admin: newUser.data[0].is_admin },
-        process.env.JWT_SECRET
-      );
+      const token = jwt.sign({ id: newUser.data[0].id, is_admin: newUser.data[0].is_admin }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
       const { password,...rest } = newUser.data[0];
 
       res
        .status(200)
-       .cookie('access_token', token, {
-          httpOnly: true,
-        })
+       .cookie('access_token', token, { httpOnly: true })
        .json(rest);
     } else {
-      const token = jwt.sign(
-        { id: user.id, is_admin: user.is_admin },
-        process.env.JWT_SECRET
-      );
+      const token = jwt.sign({ id: user.id, is_admin: user.is_admin }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
       const { password,...rest } = user;
 
       res
        .status(200)
-       .cookie('access_token', token, {
-          httpOnly: true,
-        })
+       .cookie('access_token', token, { httpOnly: true })
        .json(rest);
     }
   } catch (error) {

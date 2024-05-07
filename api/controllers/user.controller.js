@@ -6,7 +6,7 @@ import { supabase } from '../index.js';
 // This is a placeholder for your actual authentication logic
 function getCurrentUser(req) {
   // Your logic to get the current user
-  return { id: 'user_id', isAdmin: false }; // Example user object
+  return { id: 'user_id', is_admin: false }; // Example user object
 }
 
 export const updateUser = async (req, res, next) => {
@@ -54,7 +54,7 @@ export const updateUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   const { id } = getCurrentUser(req);
-  if (!id ||!id.isAdmin && id!== req.params.userId) {
+  if (!id ||!id.is_admin && id!== req.params.userId) {
     return next(errorHandler(403, 'You are not allowed to delete this user'));
   }
   try {
@@ -72,7 +72,7 @@ export const deleteUser = async (req, res, next) => {
 
 export const getUsers = async (req, res, next) => {
   const { id } = getCurrentUser(req);
-  if (!id ||!id.isAdmin) {
+  if (!id ||!id.is_admin) {
     return next(errorHandler(403, 'You are not allowed to see all users'));
   }
   try {
