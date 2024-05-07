@@ -67,12 +67,19 @@ export const signin = async (req, res, next) => {
       return next(errorHandler(400, 'Invalid password'));
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ id: user.id, is_admin: user.is_admin }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    // Send JWT token in the response
-    res.cookie('access_token', token, { httpOnly: true }).json({ token, is_admin: user.is_admin, username: user.username });
-  } catch (error) {
+    // Generate JWT token (access token)
+    const accessToken = jwt.sign({ id: user.id, is_admin: user.is_admin }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  
+    // Generate refresh token with a longer expiration (e.g., 7 days)
+    const refreshToken = jwt.sign({ id: user.id }, process.env.REFRESH_SECRET, { expiresIn: '7d' });
+  
+    // Send JWT token and refresh token in the response (HttpOnly cookie for refresh token)
+    res.cookie('access_token', accessToken, { httpOnly: true })
+      .cookie('refresh_token', refreshToken, { httpOnly: true, secure: true }) // Add secure flag for HTTPS transmission
+      .json({ token: accessToken, is_admin: user.is_admin, username: user.username });
+      console.log("Data:",  {token: accessToken, is_admin: user.is_admin, username: user.username} )
+  }
+   catch (error) {
     next(error);
   }
 };

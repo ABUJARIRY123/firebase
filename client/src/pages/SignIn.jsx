@@ -3,14 +3,16 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  signInStart,
   signInSuccess,
   signInFailure,
 } from '../redux/user/userSlice';
 import OAuth from '../components/OAuth';
+
 export default function SignIn() {
   const [formData, setFormData] = useState({});
-  const { loading, error: errorMessage } = useSelector((state) => state.user);
+  const {error: errorMessage } = useSelector((state) => state.user);
+  const [loading, setLoading] = useState(false);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const handleChange = (e) => {
@@ -22,7 +24,8 @@ export default function SignIn() {
       return dispatch(signInFailure('Please fill all the fields'));
     }
     try {
-      dispatch(signInStart());
+      setLoading(true);
+      console.log('We have started signing in')
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -30,16 +33,20 @@ export default function SignIn() {
       });
       const data = await res.json();
       if (data.success === false) {
+        setLoading(false);
         dispatch(signInFailure(data.message));
+        console.log('It has failed', data.message)
       }
 
       if (res.ok) {
+        setLoading(false);
         dispatch(signInSuccess(data));
         navigate('/dashboard');
-        console.log('Navigating to the Dashboar', data)
+        console.log('Navigating to the Dashboar')
       }
     } catch (error) {
       dispatch(signInFailure(error.message));
+      setLoading(false);
     }
   };
   return (
