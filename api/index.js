@@ -51,13 +51,25 @@ testSupabaseConnection().then(success => {
     app.use('/api/post', postRoutes);
     app.use('/api/comment', commentRoutes);
 
-      // Use url.fileURLToPath to resolve the directory name
-      const __dirname = path.dirname(fileURLToPath(import.meta.url));
-      app.use(express.static(path.join(__dirname, '/client/dist')));
-  
-      app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
-      });
+    app.use('/', express.static(path.join(fileURLToPath(import.meta.url), '..', 'public')));
+
+    // Serve static files from the 'dist' directory
+    app.use(express.static(path.join(fileURLToPath(import.meta.url), '..', 'dist')));
+
+    // Catch-all route for handling 404 errors
+  // Catch-all route for handling 404 errors
+app.all('*', (req, res) => {
+  res.status(404);
+  const distPath = path.join(fileURLToPath(import.meta.url), '..', 'dist');
+  if (req.accepts('html')) {
+    res.sendFile(path.join(distPath, '404.html'));
+  } else if (req.accepts('json')) {
+    res.json({ message: '404 Not found' });
+  } else {
+    res.type('txt').send('404 Not found');
+  }
+});
+
 
     app.use((err, req, res, next) => {
       const statusCode = err.statusCode || 500;
