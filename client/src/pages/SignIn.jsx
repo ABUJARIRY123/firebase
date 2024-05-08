@@ -62,15 +62,30 @@ export default function SignIn() {
 
       if (res.ok) {
         setLoading(false);
+        // Dispatch sign-in success action with data
         dispatch(signInSuccess(data));
-        navigate('/dashboard');
-        console.log('Navigating to the Dashboar')
+        // Set success message and schedule hiding after 6.5 seconds
+        setIsAlertVisible(true);
+        setTimeout(() => setIsAlertVisible(false), 6500);
+      } else {
+        setLoading(false);
+        return setErrorMessage(data.message); // Handle errors
       }
-    } catch (error) {
+    }
+
+    catch (error) {
       setErrorMessage(error.message);
       setLoading(false);
     }
+    
   };
+  useEffect(() => {
+    // Navigate to dashboard only if success message is visible (after delay)
+    if (isAlertVisible) {
+      setTimeout(() => navigate('/dashboard'), 1500);
+    }
+  }, [isAlertVisible, navigate]); // Re-run only when isAlertVisible changes
+
   return (
     <div className='min-h-screen flex items-center justify-center'>
       <div className='flex p-3 max-w-3xl mx-auto flex-col md:flex-row md:items-center gap-5'>      
@@ -85,7 +100,7 @@ export default function SignIn() {
               className='mt-20 absolute top-0 right-2 transition-opacity duration-1500 ease-in-out'
               color='green'
             >
-              {successMessage}
+        Logged in successfully!
             </Alert>
           )}
 
