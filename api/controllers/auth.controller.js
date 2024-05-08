@@ -39,7 +39,7 @@ export const signup = async (req, res, next) => {
 
       if (error) {
         if (error.message.includes('duplicate key value violates unique constraint')) {
-          next(errorHandler(400, 'That Email already exists, kindly recheck'));
+          next(errorHandler(400, 'That Username and or Email already exists, kindly recheck'));
         } else {
           throw error; // Or handle other errors as needed
         }

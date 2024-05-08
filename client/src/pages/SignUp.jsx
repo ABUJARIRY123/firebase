@@ -38,11 +38,12 @@ export default function SignUp() {
       });
       const data = await res.json();
       if (data.success === false) {
+        setLoading(false);
         return setErrorMessage(data.message);
       }
-      setLoading(false);
       if(res.ok) {
-        navigate('/sign-in');
+        navigate('/sign-in', { state: { message: 'Signup successful! Enter your details to sign in.' } });
+        console.log('Pop up sent:')
       }
     } catch (error) {
       setErrorMessage(error.message);
@@ -58,6 +59,7 @@ export default function SignUp() {
               {errorMessage}
             </Alert>
           )}
+          
           <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
             <div>
               <Label className='flex items-center justify-center'  value='Your username' />

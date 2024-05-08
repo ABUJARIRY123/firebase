@@ -1,6 +1,6 @@
 import { Alert, Button, Label, Spinner, TextInput } from 'flowbite-react';
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import {
   signInSuccess,
@@ -8,11 +8,14 @@ import {
 import OAuth from '../components/OAuth';
 
 export default function SignIn() {
+  const location = useLocation();
+  const successMessage = location.state?.message;
   const [formData, setFormData] = useState({});
   const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [isAlertVisible, setIsAlertVisible] = useState(false); // State to control the visibility (with transition)
 
   const [showAlert, setShowAlert] = useState(false); // State to control the visibility of the Alert
 
@@ -26,6 +29,14 @@ export default function SignIn() {
     }
   }, [errorMessage]);
 
+  useEffect(() => {
+    if (successMessage) {
+      setIsAlertVisible(true);
+      // Timeout to hide the alert after 6.5 seconds
+      const timer = setTimeout(() => setIsAlertVisible(false), 6500);
+      return () => clearTimeout(timer); // Cleanup on component unmount
+    }
+  }, [successMessage]); // Re-run only when successMessage changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
   };
@@ -69,6 +80,15 @@ export default function SignIn() {
             {errorMessage}
             </Alert>
           )}
+  {isAlertVisible && ( // Use isAlertVisible for conditional rendering
+            <Alert
+              className='mt-20 absolute top-0 right-2 transition-opacity duration-1500 ease-in-out'
+              color='green'
+            >
+              {successMessage}
+            </Alert>
+          )}
+
           <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
             <div >
               <Label className='flex items-center justify-center' value='Your email' />
