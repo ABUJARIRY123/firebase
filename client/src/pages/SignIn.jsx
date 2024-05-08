@@ -82,7 +82,7 @@ export default function SignIn() {
   useEffect(() => {
     // Navigate to dashboard only if success message is visible (after delay)
     if (isAlertVisible) {
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setTimeout(() => navigate('/dashboard'), 1000);
     }
   }, [isAlertVisible, navigate]); // Re-run only when isAlertVisible changes
 

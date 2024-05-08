@@ -1,13 +1,7 @@
 import { Alert, Button, FileInput, Select, TextInput } from 'flowbite-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import {
-  getDownloadURL,
-  getStorage,
-  ref,
-  uploadBytesResumable,
-} from 'firebase/storage';
-import { app } from '../firebase';
+import { supabase } from '../supabase';
 import { useState } from 'react';
 import { CircularProgressbar } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
@@ -19,7 +13,6 @@ export default function CreatePost() {
   const [imageUploadError, setImageUploadError] = useState(null);
   const [formData, setFormData] = useState({});
   const [publishError, setPublishError] = useState(null);
-
   const navigate = useNavigate();
 
   const handleUpdloadImage = async () => {
@@ -29,35 +22,26 @@ export default function CreatePost() {
         return;
       }
       setImageUploadError(null);
-      const storage = getStorage(app);
-      const fileName = new Date().getTime() + '-' + file.name;
-      const storageRef = ref(storage, fileName);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setImageUploadProgress(progress.toFixed(0));
-        },
-        (error) => {
-          setImageUploadError('Image upload failed');
-          setImageUploadProgress(null);
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            setImageUploadProgress(null);
-            setImageUploadError(null);
-            setFormData({ ...formData, image: downloadURL });
-          });
-        }
-      );
-    } catch (error) {
-      setImageUploadError('Image upload failed');
+      const filePath = `images/${new Date().getTime()}-${file.name}`;
+      const { error } = await supabase.storage.from('images').upload(filePath, file);
+      if (error) {
+        throw new Error('Image upload failed');
+      }
+      const { publicURL, error: urlError } = await supabase.storage.from('images').getPublicUrl(filePath);
+      if (urlError) {
+        throw new Error('Failed to get public URL');
+      }
       setImageUploadProgress(null);
-      console.log(error);
+      setImageUploadError(null);
+      setFormData({...formData, image: publicURL });
+    } catch (error) {
+      setImageUploadError(error.message);
+      setImageUploadProgress(null);
+      console.error(error);
     }
   };
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {

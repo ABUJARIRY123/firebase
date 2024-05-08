@@ -82,7 +82,7 @@ export const signin = async (req, res, next) => {
     res.cookie('access_token', accessToken, { httpOnly: true })
       .cookie('refresh_token', refreshToken, { httpOnly: true, secure: true }) // Add secure flag for HTTPS transmission
       .json({ token: accessToken, is_admin: user.is_admin, username: user.username });
-      console.log("Data:",  {token: accessToken, is_admin: user.is_admin, username: user.username} )
+      // console.log("Data:",  {token: accessToken, is_admin: user.is_admin, username: user.username} )
   }
    catch (error) {
     next(error);
